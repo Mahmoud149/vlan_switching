@@ -41,9 +41,23 @@ class SimpleSwitch(app_manager.RyuApp):
         # add a VLAN map table, dict(vlanid:[port,dpid])
         self.vlan_map = {}
         # Hard-coded this 
-        self.vlan_map = {'10':(1,1),'10':(2,1),'30':(3,1),'40':(4,1),'30':(1,2),'30':(2,2),'10':(3,2),'40':(4,40)}
+        self.vlan_map = vlan_map = {'10':[(1,1),(3,2),(2,1)],'30':[(3,1),(2,2),(1,2)],'40':[(4,1),(4,40)]}
         for vlan in vlan_map:
             mac_to_port[vlan] = {}
+    def getVLAN(self,port,dpid):
+        for vlan in mac_to_port:
+            if (port,dpid) in mac_to_port[vlan]:
+                return vlan
+        return None
+
+    def addVLAN(self,vlanID,port,dpid):
+        if vlanID not in mac_to_port:
+            mac_to_port[str(vlanID)] = [(port,dpid)]
+        else:
+            mac_to_port[str(vlanID)].append((port,dpid))
+
+    def delVLAN(self,vlanID):
+        mac_to_port.pop(str(vlanID))
 
     def getVlan(self,port,dpid):
     	# Get the VLAN associated with the given port and dpid

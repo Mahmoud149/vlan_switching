@@ -43,14 +43,14 @@ class SimpleSwitch(app_manager.RyuApp):
         self.vlan_map = {}
         # Hard-coded this 
         # {vlan: [(port,dpid)],....}
-        self.vlan_map = {'10':[(1,1),(3,2),(2,1)],'30':[(3,1),(2,2),(1,2)],'40':[(4,1),(4,40)]}
-        for vlan in vlan_map:
-            self.mac_to_port[vlan] = vlan_map[vlan]
+        self.vlan_map = {'10':[(2,2),(3,2),(2,3),(3,3)],
+                         '20':[(4,2),(5,2),(4,3),(5,3)]}
+
     def getVLAN(self,port,dpid):
-        for vlan in self.mac_to_port:
-            if (port,dpid) in self.mac_to_port[vlan]:
+        for vlan,list in self.vlan_map.items():
+            if (port,dpid) in list:
                 return vlan
-        return None
+        return 1
 
     def addVLAN(self,vlanID,port,dpid):
         if vlanID not in self.mac_to_port:
@@ -60,19 +60,9 @@ class SimpleSwitch(app_manager.RyuApp):
 
     def delVLAN(self,vlanID):
         self.mac_to_port.pop(str(vlanID))
-'''
-    def getVlan(self,port,dpid):
-    	# Get the VLAN associated with the given port and dpid
-    	vlanList =list()
-    	for (key,value) in self.vlan_map.items():
-    		if value == (port,dpid):
-    			vlanList.append(key)
-    	return vlanList
-'''
-
-    def getPorts(self,vlan,dpid):
+#    def getPorts(self,vlan,dpid):
     	# Get all the ports that belong to the VLAN in the switch
-    	pass
+#        pass
         ##############################################
 
     def add_flow(self, vlan,datapath, in_port, dst, actions):
@@ -105,6 +95,7 @@ class SimpleSwitch(app_manager.RyuApp):
 
         #Find VLAN associated with port and dpid
         vlan = str(self.getVLAN(msg.in_port,dpid))
+        self.mac_to_port.setdefault(vlan, {})
         self.mac_to_port[vlan].setdefault(dpid, {})
         
         #Include VLAN in print message

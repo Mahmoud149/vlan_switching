@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """
-An OpenFlow 1.0 L2 learning switch implementation.
+An OpenFlow 1.0 L2 learning switch implementationself.
 """
 
 import logging
@@ -36,15 +36,31 @@ class SimpleSwitch(app_manager.RyuApp):
 
     def __init__(self, *args, **kwargs):
         super(SimpleSwitch, self).__init__(*args, **kwargs)
+        # mac_to_port = dict of VLAN : (port,dpid)
         self.mac_to_port = {}
         ################ ADDED CODES #################
         # add a VLAN map table, dict(vlanid:[port,dpid])
         self.vlan_map = {}
         # Hard-coded this 
-        self.vlan_map = {'10':(1,1),'10':(2,1),'30':(3,1),'40':(4,1),'30':(1,2),'30':(2,2),'10':(3,2),'40':(4,40)}
+        # {vlan: [(port,dpid)],....}
+        self.vlan_map = {'10':[(1,1),(3,2),(2,1)],'30':[(3,1),(2,2),(1,2)],'40':[(4,1),(4,40)]}
         for vlan in vlan_map:
-            mac_to_port[vlan] = {}
+            self.mac_to_port[vlan] = vlan_map[vlan]
+    def getVLAN(self,port,dpid):
+        for vlan in self.mac_to_port:
+            if (port,dpid) in self.mac_to_port[vlan]:
+                return vlan
+        return None
 
+    def addVLAN(self,vlanID,port,dpid):
+        if vlanID not in self.mac_to_port:
+            self.mac_to_port[str(vlanID)] = [(port,dpid)]
+        else:
+            self.mac_to_port[str(vlanID)].append((port,dpid))
+
+    def delVLAN(self,vlanID):
+        self.mac_to_port.pop(str(vlanID))
+'''
     def getVlan(self,port,dpid):
     	# Get the VLAN associated with the given port and dpid
     	vlanList =list()
@@ -52,13 +68,14 @@ class SimpleSwitch(app_manager.RyuApp):
     		if value == (port,dpid):
     			vlanList.append(key)
     	return vlanList
+'''
 
     def getPorts(self,vlan,dpid):
     	# Get all the ports that belong to the VLAN in the switch
     	pass
         ##############################################
 
-    def add_flow(self, datapath, in_port, dst, actions):
+    def add_flow(self, vlan,datapath, in_port, dst, actions):
         ofproto = datapath.ofproto
 
         match = datapath.ofproto_parser.OFPMatch(
@@ -84,15 +101,21 @@ class SimpleSwitch(app_manager.RyuApp):
         src = eth.src
 
         dpid = datapath.id
-        self.mac_to_port.setdefault(vlan_id, {})
+        #self.mac_to_port.setdefault(vlan_id, {})
 
-        self.logger.info("packet in %s %s %s %s", dpid, src, dst, msg.in_port)
+        #Find VLAN associated with port and dpid
+        vlan = str(self.getVLAN(msg.in_port,dpid))
+        self.mac_to_port[vlan].setdefault(dpid, {})
+        
+        #Include VLAN in print message
+        self.logger.info("packet in DPID: %s SRC: %s DST: %s PORT: %s VLAN: %s", dpid, src, dst, msg.in_port, vlan)
+
 
         # learn a mac address to avoid FLOOD next time.
-        self.mac_to_port[dpid][src] = msg.in_port
+        self.mac_to_port[vlan][dpid][src] = msg.in_port
 
-        if dst in self.mac_to_port[dpid]:
-            out_port = self.mac_to_port[dpid][dst]
+        if dst in self.mac_to_port[vlan][dpid]:
+            out_port = self.mac_to_port[vlan][dpid][dst]
         else:
             out_port = ofproto.OFPP_FLOOD
 
@@ -100,7 +123,8 @@ class SimpleSwitch(app_manager.RyuApp):
 
         # install a flow to avoid packet_in next time
         if out_port != ofproto.OFPP_FLOOD:
-            self.add_flow(datapath, msg.in_port, dst, actions)
+            # Need to modify this code
+            self.add_flow(vlan,datapath, msg.in_port, dst, actions)
 
         data = None
         if msg.buffer_id == ofproto.OFP_NO_BUFFER:

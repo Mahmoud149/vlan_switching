@@ -59,23 +59,9 @@ class SimpleSwitch(app_manager.RyuApp):
     def getPORTS(self,vlanID,dpid):
         portList = list()
         for x in self.vlan_map[str(vlanID)]:
-        	if x[1] == dpid:
-        		portList.append(x[0])
+            if x[1] == dpid:
+                portList.append(x[0])
         return portList
-
-    def addVLAN(self,vlanID,port,dpid):
-        if vlanID not in self.mac_to_port:
-            self.mac_to_port[str(vlanID)] = [(port,dpid)]
-        else:
-            self.mac_to_port[str(vlanID)].append((port,dpid))
-
-    def delVLAN(self,vlanID):
-        self.mac_to_port.pop(str(vlanID))
-
-#    def getPorts(self,vlan,dpid):
-    	# Get all the ports that belong to the VLAN in the switch
-#        pass
-        ##############################################
 
     def add_flow(self, vlan,datapath, in_port, dst, actions):
         ofproto = datapath.ofproto
@@ -117,14 +103,11 @@ class SimpleSwitch(app_manager.RyuApp):
         self.logger.info("Pushing and Popping VLAN: %s", vlan)
         self.logger.info("Packet from PORT: %s", msg.in_port)
 
-        #if (msg.inport,) in self.mac_to_port[vlan]
-
-
         # learn a mac address to avoid FLOOD next time.
         self.mac_to_port[vlan][dpid][src] = msg.in_port
         
         if dst in self.mac_to_port[vlan][dpid]:
-        	floodOut = False
+            floodOut = False
             out_port = self.mac_to_port[vlan][dpid][dst]
             actions = [datapath.ofproto_parser.OFPActionOutput(out_port)]
         else:
@@ -134,14 +117,20 @@ class SimpleSwitch(app_manager.RyuApp):
             #create an action list and append to this list all the ports associated with the given VLAN
             floodOut = True
             actions = list()
-            for x in self.mac_to_port[vlan]:
-                actions.append(datapath.ofproto_parser.OFPActionOutput(x[0]))    
+            out_port = []
+            if vlan is '1':
+             out_port = ofproto.OFPP_FLOOD
+             actions = [datapath.ofproto_parser.OFPActionOutput(out_port)]
+            else: 
+             self.logger.warning(str(self.getPORTS(vlan,dpid)))
+             for x in self.getPORTS(vlan,dpid):
+              actions.append(datapath.ofproto_parser.OFPActionOutput(x))    
 
         #actions = [datapath.ofproto_parser.OFPActionOutput(out_port)]
 
         # install a flow to avoid packet_in next time
         # Modify some logics here since will not be using ofproto.OFPP_FLOOD
-        if (out_port != ofproto.OFPP_FLOOD) and (!floodOut):
+        if (out_port != ofproto.OFPP_FLOOD) and ( not floodOut):
             # Need to modify add_flow to support vlan tag
             self.add_flow(vlan,datapath, msg.in_port, dst, actions)
 

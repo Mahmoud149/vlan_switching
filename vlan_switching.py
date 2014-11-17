@@ -30,6 +30,10 @@ from ryu.lib.mac import haddr_to_bin
 from ryu.lib.packet import packet
 from ryu.lib.packet import ethernet
 
+# Added imports
+from ryu.ofproto.ether import ETH_TYPE_8021Q
+
+
 
 class SimpleSwitch(app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_0.OFP_VERSION]
@@ -100,27 +104,45 @@ class SimpleSwitch(app_manager.RyuApp):
         
         #Include VLAN in print message
         self.logger.info("packet in DPID: %s SRC: %s DST: %s PORT: %s VLAN: %s", dpid, src, dst, msg.in_port, vlan)
+        
+        # Push or Pop VLAN tag
+        self.logger.info("Pushing and Popping VLAN: %s", vlan)
+        self.logger.info("Packet from PORT: %s", msg.in_port)
+
+        #if (msg.inport,) in self.mac_to_port[vlan]
 
 
         # learn a mac address to avoid FLOOD next time.
         self.mac_to_port[vlan][dpid][src] = msg.in_port
-
+        
         if dst in self.mac_to_port[vlan][dpid]:
+        	floodOut = False
             out_port = self.mac_to_port[vlan][dpid][dst]
+            actions = [datapath.ofproto_parser.OFPActionOutput(out_port)]
         else:
-            out_port = ofproto.OFPP_FLOOD
+        	#Modify to flood packets only to nodes in the VLAN
+            #out_port = ofproto.OFPP_FLOOD
 
-        actions = [datapath.ofproto_parser.OFPActionOutput(out_port)]
+            #create an action list and append to this list all the ports associated with the given VLAN
+            floodOut = True
+            actions = list()
+            for x in self.mac_to_port[vlan]:
+                actions.append(datapath.ofproto_parser.OFPActionOutput(x[0]))    
+
+        #actions = [datapath.ofproto_parser.OFPActionOutput(out_port)]
 
         # install a flow to avoid packet_in next time
-        if out_port != ofproto.OFPP_FLOOD:
-            # Need to modify this code
+        # Modify some logics here since will not be using ofproto.OFPP_FLOOD
+        if (out_port != ofproto.OFPP_FLOOD) and (!floodOut):
+            # Need to modify add_flow to support vlan tag
             self.add_flow(vlan,datapath, msg.in_port, dst, actions)
 
         data = None
         if msg.buffer_id == ofproto.OFP_NO_BUFFER:
             data = msg.data
+        
 
+        #Send packet here ...
         out = datapath.ofproto_parser.OFPPacketOut(
             datapath=datapath, buffer_id=msg.buffer_id, in_port=msg.in_port,
             actions=actions, data=data)

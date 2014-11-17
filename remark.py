@@ -47,7 +47,11 @@ class SimpleSwitch13(app_manager.RyuApp):
 
         inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS,
                                actions)]
-        if meter_id: inst.append(parser.OFPInstructionMeter(meter_id,ofproto.OFPIT_METER))
+        print inst
+        print meter_id
+        if meter_id: 
+              inst[parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS,actions),
+                        parser.OFPInstructionMeter(meter_id)]
         mod = parser.OFPFlowMod(datapath=datapath,priority=priority, match=match,
                                     instructions=inst)
         datapath.send_msg(mod)
@@ -82,7 +86,7 @@ class SimpleSwitch13(app_manager.RyuApp):
         # install a flow to avoid packet_in next time
         if out_port != ofproto.OFPP_FLOOD:
             match = parser.OFPMatch(in_port=in_port, eth_dst=dst)
-                self.add_flow(datapath, 1, match, actions,1)
+            self.add_flow(datapath, 1, match, actions,1)
         data = None
 
         out = parser.OFPPacketOut(datapath=datapath, buffer_id=msg.buffer_id,

@@ -55,6 +55,13 @@ class SimpleSwitch(app_manager.RyuApp):
             if (port,dpid) in list:
                 return vlan
         return 1
+        
+    def getPORTS(self,vlanID,dpid):
+        portList = list()
+        for x in self.vlan_map[str(vlanID)]:
+        	if x[1] == dpid:
+        		portList.append(x[0])
+        return portList
 
     def addVLAN(self,vlanID,port,dpid):
         if vlanID not in self.mac_to_port:
@@ -64,6 +71,7 @@ class SimpleSwitch(app_manager.RyuApp):
 
     def delVLAN(self,vlanID):
         self.mac_to_port.pop(str(vlanID))
+
 #    def getPorts(self,vlan,dpid):
     	# Get all the ports that belong to the VLAN in the switch
 #        pass

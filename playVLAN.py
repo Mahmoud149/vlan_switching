@@ -16,11 +16,21 @@ def addVLAN(vlanID,port,dpid):
 	else:
 		mac_to_port[str(vlanID)].append((port,dpid))
 
+def getPORTS(vlanID,dpid):
+	portList = list()
+	for x in vlan_map[str(vlanID)]:
+		if x[1] == dpid:
+			portList.append(x[0])
+	return portList
+
+
 def delVLAN(vlanID):
 	mac_to_port.pop(str(vlanID))
 
 
 if __name__ == "__main__":
+	print getPORTS(10,1)
+	'''
 	print getVLAN(1,1)
 	print getVLAN(3,2)
 	print getVLAN(2,1)
@@ -32,3 +42,5 @@ if __name__ == "__main__":
 	addVLAN(11,3,4)
 	delVLAN(40)
 	print mac_to_port
+	print
+	'''

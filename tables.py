@@ -40,6 +40,7 @@ class SimpleSwitch13(app_manager.RyuApp):
         self.add_flow(DP, 0, match, actions)
         #installs meter id=1 to remark flows over 10 Mbps
 	self.add_Remark(DP,1,10000)	
+        self.add_Table(DP,2)
 
     def add_flow(self, datapath, priority, match, actions, meter_id=None):
         ofproto = datapath.ofproto
@@ -51,8 +52,8 @@ class SimpleSwitch13(app_manager.RyuApp):
         print inst
         print meter_id
         if meter_id: 
-              inst=[parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS,actions),
-                        parser.OFPInstructionMeter(meter_id)]
+              inst=[parser.OFPInstructionActions(ofproto.OFPIT_WRITE_ACTIONS,actions),
+                        parser.OFPInstructionGotoTable(2)]
         mod = parser.OFPFlowMod(datapath=datapath,priority=priority, match=match,
                                     instructions=inst)
         datapath.send_msg(mod)
@@ -93,6 +94,15 @@ class SimpleSwitch13(app_manager.RyuApp):
         out = parser.OFPPacketOut(datapath=datapath, buffer_id=msg.buffer_id,
                                   in_port=in_port, actions=actions, data=data)
         datapath.send_msg(out)
+
+    def add_Table(self,dp, table_id):
+        #create table 2 with default forwarding behavior
+        parser=dp.ofproto_parser
+        match = parser.OFPMatch()
+        inst = [parser.OFPInstructionMeter(1)]
+        mod = parser.OFPFlowMod(datapath=dp,table_id=table_id,priority=1, match=match,
+                                    instructions=inst)
+        dp.send_msg(mod)
 
     def add_Remark(self,dp,vlan,bw):
         OF=dp.ofproto

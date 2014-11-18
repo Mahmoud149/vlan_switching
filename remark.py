@@ -38,7 +38,8 @@ class SimpleSwitch13(app_manager.RyuApp):
         actions = [parser.OFPActionOutput(OF.OFPP_CONTROLLER,
                                           OF.OFPCML_NO_BUFFER)]
         self.add_flow(DP, 0, match, actions)
-	self.add_Remark(DP,1,1000)
+        #installs meter id=1 to remark flows over 10 Mbps
+	self.add_Remark(DP,1,10000)	
 
     def add_flow(self, datapath, priority, match, actions, meter_id=None):
         ofproto = datapath.ofproto
@@ -50,7 +51,7 @@ class SimpleSwitch13(app_manager.RyuApp):
         print inst
         print meter_id
         if meter_id: 
-              inst[parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS,actions),
+              inst=[parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS,actions),
                         parser.OFPInstructionMeter(meter_id)]
         mod = parser.OFPFlowMod(datapath=datapath,priority=priority, match=match,
                                     instructions=inst)
@@ -96,10 +97,10 @@ class SimpleSwitch13(app_manager.RyuApp):
     def add_Remark(self,dp,vlan,bw):
         OF=dp.ofproto
         parser=dp.ofproto_parser
-	burst_size=10
+	burst_size=10000
         band=[]
-        band.append( parser.OFPMeterBandDscpRemark( rate=self.get_BW(vlan,10),
-                                              burst_size=burst_size,prec_level=7) )
+        band.append( parser.OFPMeterBandDscpRemark( rate=self.get_BW(vlan,bw),
+                                              burst_size=burst_size,prec_level=4) )
         meter_mod=parser.OFPMeterMod(datapath=dp,
                                      command=OF.OFPMC_ADD,
                                      flags=OF.OFPMF_KBPS,

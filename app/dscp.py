@@ -97,8 +97,8 @@ class SimpleSwitch13(app_manager.RyuApp):
         OF=dp.ofproto
         #create table 2 with default forwarding behavior
         parser=dp.ofproto_parser
-#	mod = parser.OFPFlowMod(datapath=dp,table_id=table_id,priority=1)
-#        dp.send_msg(mod)
+	mod = parser.OFPFlowMod(datapath=dp,table_id=table_id,priority=1)
+        dp.send_msg(mod)
 
         match = parser.OFPMatch(ip_dscp=0,eth_type=0x0800)
         field=parser.OFPMatchField.make(OF.OXM_OF_IP_DSCP, 2)

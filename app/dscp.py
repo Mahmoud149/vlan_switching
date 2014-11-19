@@ -94,15 +94,17 @@ class SimpleSwitch13(app_manager.RyuApp):
         datapath.send_msg(out)
 
     def add_Table(self,dp, table_id):
+        OF=dp.ofproto
         #create table 2 with default forwarding behavior
         parser=dp.ofproto_parser
-	mod = parser.OFPFlowMod(datapath=dp,table_id=table_id,priority=1)
-        dp.send_msg(mod)
-        match = parser.OFPMatch(ip_dscp=0x20)
-        field=parser.OFPMatchField.make(dp.ofproto.OXM_OF_IP_DSCP, 0)
+#	mod = parser.OFPFlowMod(datapath=dp,table_id=table_id,priority=1)
+#        dp.send_msg(mod)
+
+        match = parser.OFPMatch(ip_dscp=0,eth_type=0x0800)
+        field=parser.OFPMatchField.make(OF.OXM_OF_IP_DSCP, 2)
         ActNow=[parser.OFPActionSetField(field)]
-        inst=[parser.OFPInstructionActions(dp.ofproto.OFPIT_WRITE_ACTIONS,ActNow), parser.OFPInstructionMeter(1)]
-        mod = parser.OFPFlowMod(datapath=dp,table_id=table_id,priority=1, match=match,
+        inst=[parser.OFPInstructionActions(OF.OFPIT_WRITE_ACTIONS,ActNow), parser.OFPInstructionMeter(1)]
+        mod = parser.OFPFlowMod(datapath=dp,table_id=table_id,priority=2, match=match,
                                     instructions=inst)
         dp.send_msg(mod)
 

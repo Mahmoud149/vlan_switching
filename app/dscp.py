@@ -50,13 +50,8 @@ class SimpleSwitch13(app_manager.RyuApp):
         inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS,
                                actions)]
         if meter_id: 
-         field=parser.OFPMatchField.make(ofproto.OXM_OF_VLAN_VID, 33)
-         VLAN_TAG_802_1Q = 0x8100
-         ActNow=[parser.OFPActionPushVlan(VLAN_TAG_802_1Q),
-                   parser.OFPActionSetField(field)] 
-         inst=[parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS,ActNow),
-                  parser.OFPInstructionActions(ofproto.OFPIT_WRITE_ACTIONS,actions),
-                  parser.OFPInstructionGotoTable(2)]
+         inst=[parser.OFPInstructionActions(ofproto.OFPIT_WRITE_ACTIONS,actions),
+                  parser.OFPInstructionMeter(1),parser.OFPInstructionGotoTable(2)]
         mod = parser.OFPFlowMod(datapath=datapath,priority=priority, match=match,
                                     instructions=inst)
         datapath.send_msg(mod)
@@ -101,9 +96,12 @@ class SimpleSwitch13(app_manager.RyuApp):
     def add_Table(self,dp, table_id):
         #create table 2 with default forwarding behavior
         parser=dp.ofproto_parser
-        match = parser.OFPMatch(vlan_vid=33)
-        ActNow=[parser.OFPActionPopVlan()]
-        inst=[parser.OFPInstructionActions(dp.ofproto.OFPIT_APPLY_ACTIONS,ActNow), parser.OFPInstructionMeter(1)]
+	mod = parser.OFPFlowMod(datapath=dp,table_id=table_id,priority=1)
+        dp.send_msg(mod)
+        match = parser.OFPMatch(ip_dscp=0x20)
+        field=parser.OFPMatchField.make(dp.ofproto.OXM_OF_IP_DSCP, 0)
+        ActNow=[parser.OFPActionSetField(field)]
+        inst=[parser.OFPInstructionActions(dp.ofproto.OFPIT_WRITE_ACTIONS,ActNow), parser.OFPInstructionMeter(1)]
         mod = parser.OFPFlowMod(datapath=dp,table_id=table_id,priority=1, match=match,
                                     instructions=inst)
         dp.send_msg(mod)
@@ -119,7 +117,7 @@ class SimpleSwitch13(app_manager.RyuApp):
                                      command=OF.OFPMC_ADD,
                                      flags=OF.OFPMF_KBPS,
                                      meter_id=self.get_Meter_Id(dp,vlan),bands=band)
-	dp.send_msg(meter_mod)
+        dp.send_msg(meter_mod)
 
     def get_BW(self,vlan,bw):
 	return bw

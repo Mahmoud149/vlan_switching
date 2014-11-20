@@ -61,15 +61,6 @@ class SimpleSwitch13(app_manager.RyuApp):
             if x[1] == dpid:
                 portList.append(x[0])
         return portList
-
-    def addVLAN(self,vlanID,port,dpid):
-        if vlanID not in self.mac_to_port:
-            self.mac_to_port[str(vlanID)] = [(port,dpid)]
-        else:
-            self.mac_to_port[str(vlanID)].append((port,dpid))
-
-    def delVLAN(self,vlanID):
-        self.mac_to_port.pop(str(vlanID))
     #########################################
     
     @set_ev_cls(EventOFPSwitchFeatures, CONFIG_DISPATCHER)
@@ -168,9 +159,9 @@ class SimpleSwitch13(app_manager.RyuApp):
 
         if out_port in self.edgeList:
             # Create a filed and specify the vlanID
-            self.logger.info("This is an edge port, push vlanID %s",getVLAN(msg.in_port,dpid))
+            self.logger.info("This is an edge port, push vlanID %s",self.getVLAN(msg.in_port,dpid))
             VLAN_TAG_802_1Q = 0x8100
-            field=parser.OFPMatchField.make(ofproto.OXM_OF_VLAN_VID, getVLAN(msg.in_port,dpid))
+            field=parser.OFPMatchField.make(ofproto.OXM_OF_VLAN_VID, self.getVLAN(msg.in_port,dpid))
             ActNow = [parser.OFPActionPushVlan(VLAN_TAG_802_1Q),parser.OFPActionSetField(field)]
         else:
             #outport is not an edge port

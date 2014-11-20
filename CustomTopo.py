@@ -27,19 +27,20 @@ class CustomTopo(Topo):
         counterAgg = 0
         counterEdge = 0
         counterHost = 0
-	switchcount=1
+	switchcount=2
 
         # Create Aggregate Switch
-        c1 = self.addSwitch('agg1',dpid="0000000000000001")
+        c2 = self.addSwitch('agg1',dpid="0000000001")
+        c1 = self.addSwitch('agg2',dpid="0000000002")
         # Create Tree of Switches and Hosts
         for i in range(1,access_fanout+1):
         	counterEdge += 1
                 switchcount += 1
-        	edgeSwitch = self.addSwitch('edge%s'%counterEdge,dpid="000000000000000"+`switchcount`)
+        	edgeSwitch = self.addSwitch('edge%s'%counterEdge,dpid="00000000000"+`switchcount`)
         	self.addLink(edgeSwitch,c1,**linkopts1)
-       		for j in range(1,host_fanout+1):
-       			counterHost += 1
-       			host = self.addHost('h%s'%counterHost)
-       			self.addLink(host,edgeSwitch,**linkopts2)
+                for j in range(1,host_fanout+1):
+                    counterHost += 1
+       	            host = self.addHost('h%s'%counterHost)
+       	            self.addLink(host,edgeSwitch,**linkopts2)
                     
 topos = { 'custom': ( lambda: CustomTopo() ) }

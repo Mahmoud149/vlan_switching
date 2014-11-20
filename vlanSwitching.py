@@ -56,17 +56,6 @@ class SimpleSwitch13(app_manager.RyuApp):
             if x[1] == dpid:
                 portList.append(x[0])
         return portList
-
-    def addVLAN(self,vlanID,port,dpid):
-        self.logger.info("addVLAN called vlanID = %s port = %s dpid = %s",vlanID,port,dpid)
-        if vlanID not in self.mac_to_port:
-            self.mac_to_port[str(vlanID)] = [(port,dpid)]
-        else:
-            self.mac_to_port[str(vlanID)].append((port,dpid))
-
-    def delVLAN(self,vlanID):
-        self.logger.info("delVLAN called vlanID = %s",vlanID)
-        self.mac_to_port.pop(str(vlanID))
     ##################################################################
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
     def switch_features_handler(self, ev):

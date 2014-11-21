@@ -10,7 +10,7 @@ from mininet.topo import Topo
 class CustomTopo(Topo):
     "Simple Data Center Topology"
 
-    "linkopts - (1:core, 2:aggregation, 3: edge) parameters"
+    "linkopts - (1:core, 2:ToR, 3: access) parameters"
     "fanout - number of child switch per parent switch"
     def __init__(self, linkopts1={}, linkopts2={}, access_fanout=2, host_fanout=2, **opts):
         # Initialize topology and default options
@@ -28,13 +28,13 @@ class CustomTopo(Topo):
 
         # Create Aggregate Switch
         c2 = self.addSwitch('dumb',dpid="0000000001",cls=UserSwitch)
-        c1 = self.addSwitch('bridge',dpid="0000000002",cls=OVSBridge)
+        bridge = self.addSwitch('bridge',dpid="0000000002",cls=OVSBridge)
         # Create Tree of Switches and Hosts
         for i in range(1,access_fanout+1):
         	counterEdge += 1
                 switchcount += 1
         	edgeSwitch = self.addSwitch('edge%s'%counterEdge,dpid="00000000000"+`switchcount`,cls=UserSwitch)
-        	#self.addLink(edgeSwitch,c1,**linkopts1)
+        	self.addLink(edgeSwitch,bridge,**linkopts1)
                 for j in range(1,host_fanout+1):
                     counterHost += 1
        	            host = self.addHost('h%s'%counterHost)
@@ -46,14 +46,11 @@ setLogLevel('info')
 linkopts1 = {'bw':50}
 linkopts2 = {'bw':30}
 
-topo = CustomTopo(linkopts1, linkopts2, access_fanout=1,host_fanout=4)
+topo = CustomTopo(linkopts1, linkopts2, access_fanout=2,host_fanout=4)
 
 net = Mininet(topo=topo, link=TCLink,
    controller=lambda name: RemoteController( name, ip='127.0.0.1' ),listenPort=6633)
-intfName='eth0'
-switch = net.switches[ 2 ]
-print ('*** Adding hardware interface'+ intfName+ 'to switch'+ switch.name+ '\n') 
-_intf = Intf( intfName, node=switch )
 net.start()
+net.pingAll()
 CLI(net)
 

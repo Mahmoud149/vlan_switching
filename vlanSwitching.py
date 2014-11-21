@@ -57,8 +57,8 @@ class SimpleSwitch13(app_manager.RyuApp):
     def getPORTS(self,vlanID,dpid):
         self.logger.info("getPORTS called vlanID = %s dpid = %s",vlanID,dpid)
         access=[x[0] if x[1]==dpid else 0 for x in self.vlan_map[vlanID]]
-        trunk=[x[0] if x[1]==dpid else 0 for x in self.trunk_map[vlanID]]
-        ports=access+trunk
+        #trunk=[x[0] if x[1]==dpid else 0 for x in self.trunk_map[vlanID]]
+        ports=access#+trunk
         while 0 in ports: ports.remove(0)
         return ports
 
@@ -122,11 +122,11 @@ class SimpleSwitch13(app_manager.RyuApp):
 
         if dst in self.mac_to_port[vlan][dpid]:
             self.logger.info("found %s in mac_to_port[%s][%s]",dst,vlan,dpid)
-            floodOut = False
+            known = True
             out_port = self.mac_to_port[vlan][dpid][dst]
             actions = [datapath.ofproto_parser.OFPActionOutput(out_port)]
         else:
-            floodOut = True
+            known = False
             actions = []
             out_port = []
             if vlan is '1':
@@ -135,13 +135,18 @@ class SimpleSwitch13(app_manager.RyuApp):
             #out_port = ofproto.OFPP_FLOOD
             else:
                 self.logger.warning(str(self.getPORTS(vlan,dpid)))
-                for x in self.getPORTS(vlan,dpid):
+                out_port=self.getPORTS(vlan,dpid)
+                for x in out_port:
                     actions.append(datapath.ofproto_parser.OFPActionOutput(x))
-
+        #Vlan Trunking
+#        if Floodoutput=set()
+#        output.add(out_port)  if len(out_port)<2 else output.update(out_port)
+#        trunk=self.getTrunkPorts(dpid)
+#        if any(output.intersection(set(trunk))):
         #actions = [parser.OFPActionOutput(out_port)]
 
         # install a flow to avoid packet_in next time
-        if out_port != ofproto.OFPP_FLOOD:
+        if known:
             match = parser.OFPMatch(in_port=in_port, eth_dst=dst)
             # verify if we have a valid buffer_id, if yes avoid to send both
             # flow_mod & packet_out
@@ -150,6 +155,8 @@ class SimpleSwitch13(app_manager.RyuApp):
                 return
             else:
                 self.add_flow(datapath, 1, match, actions)
+	else:
+		#trunk
         data = None
         if msg.buffer_id == ofproto.OFP_NO_BUFFER:
             data = msg.data

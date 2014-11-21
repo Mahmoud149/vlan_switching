@@ -31,13 +31,13 @@ class SimpleSwitch13(app_manager.RyuApp):
 
         # add a VLAN map table 
         # format: {'vlanID':[(port1,dpid1),(port2,dpid2),...]}
-        self.vlan_map = {'10':[(2,1),(1,1),(1,3),
+        self.vlan_map = {'10':[(2,1),(1,1),
                            (2,3),(3,3),(4,3),
-			   (1,4),(5,4)],
+			   (5,4)],
                          '20':[(2,4),(3,4),(4,4),
                            (5,3)]}
-#        self.trunk_map = {'10':[(1,3),(1,4)],
-#                          '20':[(1,3),(1,4)]}
+        self.trunk_map = {'10':[(1,3),(1,4)],
+                          '20':[(1,3),(1,4)]}
 
         # populate edgeList containing edge ports
         self.edgeList = list()
@@ -56,11 +56,11 @@ class SimpleSwitch13(app_manager.RyuApp):
 
     def getPORTS(self,vlanID,dpid):
         self.logger.info("getPORTS called vlanID = %s dpid = %s",vlanID,dpid)
-        portList = list()
-        for x in self.vlan_map[str(vlanID)]:
-            if x[1] == dpid:
-                portList.append(x[0])
-        return portList
+        access=[x[0] if x[1]==dpid else 0 for x in self.vlan_map[vlanID]]
+        trunk=[x[0] if x[1]==dpid else 0 for x in self.trunk_map[vlanID]]
+        ports=access+trunk
+        while 0 in ports: ports.remove(0)
+        return ports
 
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
     def switch_features_handler(self, ev):

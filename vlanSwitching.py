@@ -31,7 +31,7 @@ class SimpleSwitch13(app_manager.RyuApp):
 
         # add a VLAN map table 
         # format: {'vlanID':[(port1,dpid1),(port2,dpid2),...]}
-        self.vlan_map = {'10':[(2,1),(1,1),(1,3)
+        self.vlan_map = {'10':[(2,1),(1,1),(1,3),
                            (2,3),(3,3),(4,3),
 			   (1,4),(5,4)],
                          '20':[(2,4),(3,4),(4,4),

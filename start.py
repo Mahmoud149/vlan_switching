@@ -50,10 +50,10 @@ topo = CustomTopo(linkopts1, linkopts2, access_fanout=1,host_fanout=4)
 
 net = Mininet(topo=topo, link=TCLink,
    controller=lambda name: RemoteController( name, ip='127.0.0.1' ),listenPort=6633)
-intfName='eth0'
-switch = net.switches[ 2 ]
-print ('*** Adding hardware interface'+ intfName+ 'to switch'+ switch.name+ '\n') 
-_intf = Intf( intfName, node=switch )
+#intfName='eth0'
+#switch = net.switches[ 2 ]
+#print ('*** Adding hardware interface'+ intfName+ 'to switch'+ switch.name+ '\n') 
+#_intf = Intf( intfName, node=switch )
 net.start()
 CLI(net)
 

@@ -31,8 +31,8 @@ class SimpleSwitch13(app_manager.RyuApp):
 
         # add a VLAN map table 
         # format: {'vlanID':[(port1,dpid1),(port2,dpid2),...]}
-        self.vlan_map = {'10':[(2,1),(1,1),(2,3),(3,3)],
-        '20':[(4,2),(5,2),(4,3),(5,3)]}
+        self.vlan_map = {'10':[(2,1),(0,3),(1,3),(2,3)],
+        '20':[(4,2),(5,2)]}
 
         # populate edgeList containing edge ports
         self.edgeList = list()
@@ -75,12 +75,16 @@ class SimpleSwitch13(app_manager.RyuApp):
                                           ofproto.OFPCML_NO_BUFFER)]
         self.add_flow(datapath, 0, match, actions)
 
-    def add_flow(self, datapath, priority, match, actions, buffer_id=None):
+    def add_flow(self, datapath, priority, match, actions, buffer_id=None,Actfirst=None):
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
-
-        inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS,
+        if Actfirst is None:
+              inst = [parser.OFPInstructionActions(ofproto.OFPIT_WRITE_ACTIONS,
                                              actions)]
+        else:
+              inst=[parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS,ActNow),
+              parser.OFPInstructionActions(ofproto.OFPIT_WRITE_ACTIONS,actions)]
+
         if buffer_id:
             mod = parser.OFPFlowMod(datapath=datapath, buffer_id=buffer_id,
                                     priority=priority, match=match,

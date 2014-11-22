@@ -33,7 +33,7 @@ class SimpleSwitch13(app_manager.RyuApp):
         # format: {'vlanID':[(port1,dpid1),(port2,dpid2),...]}
         self.vlan_map = {'10':[(2,1),(1,1),
                            (2,3),(3,3),(4,3),
-			   (5,4)],
+			               (5,4)],
                          '20':[(2,4),(3,4),(4,4),
                            (5,3)]}
         self.trunk_map = {'10':[(1,3),(1,4)],
@@ -42,22 +42,15 @@ class SimpleSwitch13(app_manager.RyuApp):
         self.edges=self.getEdges()
 
     def getEdges(self):
-        edges = list()
-        for x in self.vlan_map:
-            for y in self.vlan_map[x]:
-                if y[0] not in self.edges:
-                    self.edges.append(y[0])
-        return edges
+        edges = [(pt,id) for vlan in self.vlan_map.values() for (pt,id) in vlan]
+        return list(set(edges))
         
     def getVlan(self,port,dpid):
-        self.logger.info("getVlan called port = %s dpid = %s",port,dpid)
         for vlan,list in self.vlan_map.items():
-            if (port,dpid) in list:
-                return vlan
+            if (port,dpid) in list:  return vlan
         return 1
 
     def getPorts(self,map,vlanID,dpid):
-        self.logger.info("getPorts called vlanID = %s dpid = %s",vlanID,dpid)
         ports=[x[0] if x[1]==dpid else 0 for x in map[vlanID]]
         while 0 in ports: ports.remove(0)
         return ports
@@ -75,7 +68,6 @@ class SimpleSwitch13(app_manager.RyuApp):
     def add_flow(self, datapath, priority, match, actions, write,buffer_id=None):
         OF = datapath.ofproto
         parser = datapath.ofproto_parser
-
         inst = [parser.OFPInstructionActions(OF.OFPIT_APPLY_ACTIONS,actions),
                 parser.OFPInstructionActions(OF.OFPIT_WRITE_ACTIONS,actions)]
         if buffer_id:

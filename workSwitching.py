@@ -141,8 +141,9 @@ class SimpleSwitch13(app_manager.RyuApp):
                 out_port = OF.OFPP_FLOOD
                 Wactions.append(parser.OFPActionOutput(out_port))
             else:
+                out_port=list(set(access_ports'''+trunk_ports''')-set([in_port]))
                 #self.logger.warning(str(self.getPorts(self.vlan,dpid)))
-                for x in self.getPorts(self.vlan_map,vlan,dpid):
+                for x in out_port:
                     Wactions.append(datapath.ofproto_parser.OFPActionOutput(x))
 
         #actions = [parser.OFPActionOutput(out_port)]

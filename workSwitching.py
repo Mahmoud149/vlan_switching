@@ -143,7 +143,7 @@ class SimpleSwitch13(app_manager.RyuApp):
             else:
                 #self.logger.warning(str(self.getPorts(self.vlan,dpid)))
                 for x in self.getPorts(self.vlan_map,vlan,dpid):
-                    actions.append(datapath.ofproto_parser.OFPActionOutput(x))
+                    Wactions.append(datapath.ofproto_parser.OFPActionOutput(x))
 
         #actions = [parser.OFPActionOutput(out_port)]
 

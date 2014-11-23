@@ -53,13 +53,13 @@ class SimpleSwitch13(app_manager.RyuApp):
 #<<<<<<< HEAD
     def getPorts(self,map,vlanID,dpid):
         ports=[port if id==dpid else 0 for (port,id) in map[vlanID]]
-    '''=======
-    def getPORTS(self,vlanID,dpid):
+        '''=======
+        def getPORTS(self,vlanID,dpid):
         self.logger.info("getPORTS called vlanID = %s dpid = %s",vlanID,dpid)
         access=[x[0] if x[1]==dpid else 0 for x in self.vlan_map[vlanID]]
         trunk=[x[0] if x[1]==dpid else 0 for x in self.trunk_map[vlanID]]
         ports=access+trunk
-    >>>>>> parent of 51315fa... Not working yet. Gotta fix flooding on vlan trunk'''
+        >>>>>> parent of 51315fa... Not working yet. Gotta fix flooding on vlan trunk'''
         while 0 in ports: ports.remove(0)
         return ports
 
@@ -127,7 +127,7 @@ class SimpleSwitch13(app_manager.RyuApp):
             self.logger.info("found %s in mac_to_port[%s][%s]",dst,vlan,dpid)
             floodOut = False
             out_port = self.mac_to_port[vlan][dpid][dst]
-            Wactions.append(datapath.ofproto_parser.OFPActionOutput(out_port))
+            Wactions.append(parser.OFPActionOutput(out_port))
             #Pushing Vlan Tag if necessary
             '''if out_port in trunk_ports and vlan is not '1':
                 field=parser.OFPMatchField.make(OF.OXM_OF_VLAN_VID,vlan)
@@ -139,16 +139,16 @@ class SimpleSwitch13(app_manager.RyuApp):
             out_port = []
             if vlan is '1':
                 out_port = OF.OFPP_FLOOD
-                Wactions.append(datapath.ofproto_parser.OFPActionOutput(out_port))
+                Wactions.append(parser.OFPActionOutput(out_port))
             else:
-                self.logger.warning(str(self.getPORTS(vlan,dpid)))
-                for x in self.getPORTS(vlan,dpid):
+                #self.logger.warning(str(self.getPorts(self.vlan,dpid)))
+                for x in self.getPorts(self.vlan_map,vlan,dpid):
                     actions.append(datapath.ofproto_parser.OFPActionOutput(x))
 
         #actions = [parser.OFPActionOutput(out_port)]
 
         # install a flow to avoid packet_in next time
-        if out_port != ofproto.OFPP_FLOOD:
+        if not floodOut:
             match = parser.OFPMatch(in_port=in_port, eth_dst=dst)
             # verify if we have a valid buffer_id, if yes avoid to send both
             # flow_mod & packet_out

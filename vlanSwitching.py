@@ -96,12 +96,12 @@ class SimpleSwitch13(app_manager.RyuApp):
         Wactions=[]
         match = parser.OFPMatch()
         #Pop Vlan Tag if necessary        
-        if VLAN in header: 
+        '''if VLAN in header: 
             vlan=header[VLAN].vid
             match = set_vlan_vid_masked(vlan,((1 << 16) - 2))
             actions.append(parser.OFPActionPopVlan())
             vlan=vlan-vlan%2#get even vlans            
-            return
+            return'''
         eth = header[ETHERNET]
         dst,src = eth.dst,eth.src
         self.logger.info("packet in %s src: %s dst: %s P: %s V: %s", dpid, src, dst,in_port, vlan)
@@ -118,10 +118,11 @@ class SimpleSwitch13(app_manager.RyuApp):
             known = True
             out_port = self.mac_to_port[vlan][dpid][dst]
             Wactions.append(datapath.ofproto_parser.OFPActionOutput(out_port))
-            if out_port in trunk_ports and vlan is not '1':
+            #Pushing Vlan Tag if necessary
+            '''if out_port in trunk_ports and vlan is not '1':
                 field=parser.OFPMatchField.make(OF.OXM_OF_VLAN_VID,vlan)
                 actions.append(parser.OFPActionPushVlan(VLAN_TAG_802_1Q))
-                actions.append(parser.OFPActionSetField(field))
+                actions.append(parser.OFPActionSetField(field))'''
         else:
             known = False
             if vlan is '1':

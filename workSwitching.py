@@ -59,7 +59,7 @@ class SimpleSwitch13(app_manager.RyuApp):
         access=[x[0] if x[1]==dpid else 0 for x in self.vlan_map[vlanID]]
         trunk=[x[0] if x[1]==dpid else 0 for x in self.trunk_map[vlanID]]
         ports=access+trunk
-    >>>>>> parent of 51315fa... Not working yet. Gotta fix flooding on vlan trunk''''
+    >>>>>> parent of 51315fa... Not working yet. Gotta fix flooding on vlan trunk'''
         while 0 in ports: ports.remove(0)
         return ports
 

@@ -51,7 +51,7 @@ class SimpleSwitch13(app_manager.RyuApp):
         return 1
 
     def getPorts(self,map,vlanID,dpid):
-        ports=[x[0] if x[1]==dpid else 0 for x in map[vlanID]]
+        ports=[port if id==dpid else 0 for (port,id) in map[vlanID]]
         while 0 in ports: ports.remove(0)
         return ports
 
@@ -107,9 +107,9 @@ class SimpleSwitch13(app_manager.RyuApp):
 
         self.mac_to_port.setdefault(vlan, {})
         self.mac_to_port[vlan].setdefault(dpid, {})
-
-        access_ports=self.getPorts(self.vlan_map,vlan,dpid)
-        trunk_ports=self.getPorts(self.trunk_map,vlan,dpid)
+        if vlan is not '1':
+            access_ports=self.getPorts(self.vlan_map,vlan,dpid)
+            trunk_ports=self.getPorts(self.trunk_map,vlan,dpid)
 
         # learn a mac address to avoid FLOOD next time.
         self.mac_to_port[vlan][dpid][src] = in_port
@@ -118,7 +118,7 @@ class SimpleSwitch13(app_manager.RyuApp):
             known = True
             out_port = self.mac_to_port[vlan][dpid][dst]
             Wactions.append(datapath.ofproto_parser.OFPActionOutput(out_port))
-            if out_port in trunk_ports:
+            if out_port in trunk_ports and vlan is not '1':
                 field=parser.OFPMatchField.make(OF.OXM_OF_VLAN_VID,vlan)
                 actions.append(parser.OFPActionPushVlan(VLAN_TAG_802_1Q))
                 actions.append(parser.OFPActionSetField(field))

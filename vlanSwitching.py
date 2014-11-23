@@ -136,8 +136,8 @@ class SimpleSwitch13(app_manager.RyuApp):
 
         # install a flow to avoid packet_in next time
         if known:
-            match.set_in_port(in_port)
-            match.set_dl_dst(dst)
+            match.append_field(OF.OXM_OF_IN_PORT,in_port)
+            match.append_field(OF.OXM_OF_ETH_DST,dst)
             # flow_mod & packet_out
             if msg.buffer_id != OF.OFP_NO_BUFFER:
                 self.add_flow(datapath, 1, match, actions, write=Wactions,buffer_id=msg.buffer_id)

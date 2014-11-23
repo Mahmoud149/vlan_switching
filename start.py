@@ -51,6 +51,6 @@ topo = CustomTopo(linkopts1, linkopts2, access_fanout=2,host_fanout=4)
 net = Mininet(topo=topo, link=TCLink,
    controller=lambda name: RemoteController( name, ip='127.0.0.1' ),listenPort=6633)
 net.start()
-net.pingAll(timeout=0.1)
+#net.pingAll(timeout=0.1)
 CLI(net)
 

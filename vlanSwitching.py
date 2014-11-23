@@ -68,8 +68,9 @@ class SimpleSwitch13(app_manager.RyuApp):
     def add_flow(self, datapath, priority, match, actions, write=None,buffer_id=None):
         OF = datapath.ofproto
         parser = datapath.ofproto_parser
-        inst = [parser.OFPInstructionActions(OF.OFPIT_APPLY_ACTIONS,actions),
-                parser.OFPInstructionActions(OF.OFPIT_WRITE_ACTIONS,actions)]
+        inst=[]
+        if len(actions)>0: inst.append(parser.OFPInstructionActions(OF.OFPIT_APPLY_ACTIONS,actions))
+        if write is not None:inst.append(parser.OFPInstructionActions(OF.OFPIT_WRITE_ACTIONS,write))
         if buffer_id:
             mod = parser.OFPFlowMod(datapath=datapath, buffer_id=buffer_id,
                         priority=priority, match=match,instructions=inst)
@@ -89,7 +90,6 @@ class SimpleSwitch13(app_manager.RyuApp):
         datapath = msg.datapath
         OF,parser = datapath.ofproto,datapath.ofproto_parser
         in_port = msg.match['in_port']
-        
         dpid = datapath.id
         vlan = str(self.getVlan(in_port,dpid))
         actions=[]
@@ -104,7 +104,7 @@ class SimpleSwitch13(app_manager.RyuApp):
             return
         eth = header[ETHERNET]
         dst,src = eth.dst,eth.src
-
+        self.logger.info("packet in %s src: %s dst: %s P: %s V: %s", dpid, src, dst,in_port, vlan)
         self.mac_to_port.setdefault(vlan, {})
         self.mac_to_port[vlan].setdefault(dpid, {})
         if vlan is not '1':
@@ -128,7 +128,7 @@ class SimpleSwitch13(app_manager.RyuApp):
                 out_port = OF.OFPP_FLOOD
                 Wactions.append(datapath.ofproto_parser.OFPActionOutput(out_port))
             else:
-                out_port=access_ports+trunk_ports
+                out_port=list(set(access_ports+trunk_ports)-set([in_port]))
                 for x in out_port:
                     Wactions.append(parser.OFPActionOutput(x))
 
@@ -142,13 +142,12 @@ class SimpleSwitch13(app_manager.RyuApp):
                 return
             else:
                 self.add_flow(datapath, 1, match, actions, write=Wactions)
-
+        self.logger.info("packet out %s P: %s V: %s", dpid, out_port, vlan)
         data = None
         if msg.buffer_id == OF.OFP_NO_BUFFER:
             data = msg.data
         actions=actions+Wactions
-        out = parser.OFPPacketOut(datapath=datapath, buffer_id=msg.buffer_id,
-                                  in_port=in_port, actions=actions, data=data)
+        out = parser.OFPPacketOut(datapath=datapath,in_port=in_port, buffer_id=msg.buffer_id, actions=actions, data=data)
         datapath.send_msg(out)
 
 

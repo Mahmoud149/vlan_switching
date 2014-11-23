@@ -158,6 +158,7 @@ class SimpleSwitch13(app_manager.RyuApp):
                 return
             else:
                 self.add_flow(datapath, 1, match, actions,write=Wactions)
+        self.logger.info("packet out %s P: %s V: %s", dpid, out_port, vlan)
         data = None
         if msg.buffer_id == OF.OFP_NO_BUFFER:
             data = msg.data

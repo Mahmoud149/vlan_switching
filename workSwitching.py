@@ -156,7 +156,7 @@ class SimpleSwitch13(app_manager.RyuApp):
                 self.add_flow(datapath, 1, match, actions, write=Wactions,buffer_id=msg.buffer_id)
                 return
             else:
-                self.add_flow(datapath, 1, match, actions)
+                self.add_flow(datapath, 1, match, actions,write=Wactions)
         data = None
         if msg.buffer_id == OF.OFP_NO_BUFFER:
             data = msg.data

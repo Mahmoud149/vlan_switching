@@ -113,7 +113,7 @@ class SimpleSwitch13(app_manager.RyuApp):
             return'''
         eth = header[ETHERNET]
         dst,src = eth.dst,eth.src
-        self.logger.info("packet in %s src: %s dst: %s P: %s V: %s", dpid, src, dst,in_port, vlan)
+        #self.logger.info("packet in %s src: %s dst: %s P: %s V: %s", dpid, src, dst,in_port, vlan)
         self.mac_to_port.setdefault(vlan, {})
         self.mac_to_port[vlan].setdefault(dpid, {})
         if vlan is not '1':
@@ -124,15 +124,16 @@ class SimpleSwitch13(app_manager.RyuApp):
         self.mac_to_port[vlan][dpid][src] = in_port
 
         if dst in self.mac_to_port[vlan][dpid]:
-            self.logger.info("found %s in mac_to_port[%s][%s]",dst,vlan,dpid)
+            #self.logger.info("found %s in mac_to_port[%s][%s]",dst,vlan,dpid)
             floodOut = False
             out_port = self.mac_to_port[vlan][dpid][dst]
             Wactions.append(parser.OFPActionOutput(out_port))
             #Pushing Vlan Tag if necessary
-            '''if out_port in trunk_ports and vlan is not '1':
+            if out_port in trunk_ports and vlan is not '1':
+                self.logger.info("Pushing Vlan Tag %s" vlan, dpid)
                 field=parser.OFPMatchField.make(OF.OXM_OF_VLAN_VID,vlan)
                 actions.append(parser.OFPActionPushVlan(VLAN_TAG_802_1Q))
-                actions.append(parser.OFPActionSetField(field))'''
+                actions.append(parser.OFPActionSetField(field))
         else:
             floodOut = True
             actions = []
@@ -158,7 +159,7 @@ class SimpleSwitch13(app_manager.RyuApp):
                 return
             else:
                 self.add_flow(datapath, 1, match, actions,write=Wactions)
-        self.logger.info("packet out %s P: %s V: %s", dpid, out_port, vlan)
+        #self.logger.info("packet out %s P: %s V: %s", dpid, out_port, vlan)
         data = None
         if msg.buffer_id == OF.OFP_NO_BUFFER:
             data = msg.data

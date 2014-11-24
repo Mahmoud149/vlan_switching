@@ -31,13 +31,13 @@ class SimpleSwitch13(app_manager.RyuApp):
         self.mac_to_port = {}
         # add a VLAN map table 
         # format: {'vlanID':[(port1,dpid1),(port2,dpid2),...]}
-        self.vlan_map = {'10':[(2,1),(1,1),
+        self.vlan_map = {10:[(2,1),(1,1),
                            (2,3),(3,3),(4,3),
 			               (5,4)],
-                         '20':[(2,4),(3,4),(4,4),
+                         20:[(2,4),(3,4),(4,4),
                            (5,3)]}
-        self.trunk_map = {'10':[(1,3),(1,4)],
-                          '20':[(1,3),(1,4)]}
+        self.trunk_map = {10:[(1,3),(1,4)],
+                          20:[(1,3),(1,4)]}
         # populate edges containing edge ports
         self.edges=self.getEdges()
 
@@ -85,7 +85,8 @@ class SimpleSwitch13(app_manager.RyuApp):
         else:
             mod = parser.OFPFlowMod(datapath=datapath, priority=priority,
                                     match=match, instructions=inst)
-        self.logger.info("flow_mod match: %s action: %s", str(match),str(inst))
+        print inst
+        #self.logger.info("flow_mod match: %s action: %s", str(match),str(inst))
         datapath.send_msg(mod)
 
     @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
@@ -100,38 +101,36 @@ class SimpleSwitch13(app_manager.RyuApp):
         OF,parser = datapath.ofproto,datapath.ofproto_parser
         in_port = msg.match['in_port']
         dpid = datapath.id
-        vlan = str(self.getVlan(in_port,dpid))
+        vlan = self.getVlan(in_port,dpid)
         actions=[]
         Wactions=[]
         match = parser.OFPMatch()
-        #Pop Vlan Tag if necessary        
-        '''if VLAN in header: 
-            vlan=header[VLAN].vid
-            vlan=vlan-vlan%2#get even vlans            
-            return'''
         eth = header[ETHERNET]
         dst,src = eth.dst,eth.src
+        #Pop Vlan Tag if necessary        
+        if VLAN in header: 
+            vlan=header[VLAN].vid
+            vlan=vlan-vlan%2#get even vlans
+            print ("Vlan in the HEADER %s src: %s dst: %s P: %s V: %s", dpid, src, dst,in_port, vlan)           
         #self.logger.info("packet in %s src: %s dst: %s P: %s V: %s", dpid, src, dst,in_port, vlan)
         self.mac_to_port.setdefault(dpid, {})
-        if vlan is not '1':
+        if vlan is not 1:
             access_ports=self.getPorts(self.vlan_map,vlan,dpid)
             trunk_ports=self.getPorts(self.trunk_map,vlan,dpid)
 
         # learn a mac address to avoid FLOOD next time.
         self.mac_to_port[dpid][src] = in_port
-
+        self.logger.info("packet in %s src: %s dst: %s P: %s V: %s", dpid, src, dst,in_port, vlan)
         if dst in self.mac_to_port[dpid]:
             #self.logger.info("found %s in mac_to_port[%s][%s]",dst,vlan,dpid)
             floodOut = False
-            out_port = self.mac_to_port[dpid][dst]
-            
-            #Pushing Vlan Tag if necessary
+            out_port = self.mac_to_port[dpid][dst]           
             self.logger.info("packet known %s P: %s V: %s", dpid, out_port, vlan)
-            if vlan is '1':
+            if vlan is 1:
                 Wactions.append(parser.OFPActionOutput(out_port))
             elif out_port in trunk_ports:
                 Wactions.append(parser.OFPActionOutput(out_port))
-                self.logger.info("Pushing Vlan Tag %s, dpid:%s", vlan, dpid)
+                self.logger.info("Pushing Vlan Tag %s, dpid:%s,src:%s,dst:%s", vlan, dpid,src, dst)
                 field=parser.OFPMatchField.make(OF.OXM_OF_VLAN_VID,vlan)
                 actions.append(parser.OFPActionPushVlan(VLAN_TAG_802_1Q))
                 actions.append(parser.OFPActionSetField(field))
@@ -142,7 +141,7 @@ class SimpleSwitch13(app_manager.RyuApp):
             floodOut = True
             actions = []
             out_port = []
-            if vlan is '1':
+            if vlan is 1:
                 out_port = OF.OFPP_FLOOD
                 Wactions.append(parser.OFPActionOutput(out_port))
             else:
@@ -156,7 +155,9 @@ class SimpleSwitch13(app_manager.RyuApp):
         # install a flow to avoid packet_in next time
         if not floodOut:
             if VLAN in header:
+                print ("About to POP VLAN in %s src: %s dst: %s P: %s V: %s", dpid, src, dst,in_port, vlan)
                 match = parser.OFPMatch(in_port=in_port, eth_dst=dst,vlan_vid=vlan)
+                actions.append(parser.OFPActionPopVlan())
                 #match.set_vlan_vid_masked(vlan,((1 << 16) - 2))
             else:
                 match = parser.OFPMatch(in_port=in_port, eth_dst=dst)

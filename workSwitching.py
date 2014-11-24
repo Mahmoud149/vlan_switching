@@ -107,8 +107,6 @@ class SimpleSwitch13(app_manager.RyuApp):
         #Pop Vlan Tag if necessary        
         '''if VLAN in header: 
             vlan=header[VLAN].vid
-            match = set_vlan_vid_masked(vlan,((1 << 16) - 2))
-            actions.append(parser.OFPActionPopVlan())
             vlan=vlan-vlan%2#get even vlans            
             return'''
         eth = header[ETHERNET]
@@ -152,11 +150,12 @@ class SimpleSwitch13(app_manager.RyuApp):
 
         # install a flow to avoid packet_in next time
         if not floodOut:
-            match = parser.OFPMatch()
-            match.append_field(OF.OXM_OF_IN_PORT,in_port)
-            match.append_field(OF.OXM_OF_ETH_DST,dst)
-            match.set_in_port(in_port)
-            match.set_dl_dst(dst)
+            if VLAN in header:
+                match = parser.OFPMatch(in_port=in_port, eth_dst=dst,vlan_vid=vlan)
+                #match.set_vlan_vid_masked(vlan,((1 << 16) - 2))
+            else:
+                match = parser.OFPMatch(in_port=in_port, eth_dst=dst)
+            #actions.append(parser.OFPActionPopVlan())
             # verify if we have a valid buffer_id, if yes avoid to send both
             # flow_mod & packet_out
             if msg.buffer_id != OF.OFP_NO_BUFFER:

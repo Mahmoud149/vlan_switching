@@ -152,7 +152,9 @@ class SimpleSwitch13(app_manager.RyuApp):
 
         # install a flow to avoid packet_in next time
         if not floodOut:
-            match = parser.OFPMatch(in_port=in_port, eth_dst=dst)
+            match = parser.OFPMatch()
+            match.append_field(OF.OXM_OF_IN_PORT,in_port)
+            match.append_field(OF.OXM_OF_ETH_DST,dst)
             # verify if we have a valid buffer_id, if yes avoid to send both
             # flow_mod & packet_out
             if msg.buffer_id != OF.OFP_NO_BUFFER:

@@ -129,8 +129,9 @@ class SimpleSwitch13(app_manager.RyuApp):
             out_port = self.mac_to_port[vlan][dpid][dst]
             Wactions.append(parser.OFPActionOutput(out_port))
             #Pushing Vlan Tag if necessary
+            self.logger.info("packet known %s P: %s V: %s", dpid, out_port, vlan)
             if out_port in trunk_ports and vlan is not '1':
-                self.logger.info("Pushing Vlan Tag %s" vlan, dpid)
+                self.logger.info("Pushing Vlan Tag %s, dpid:%s", vlan, dpid)
                 field=parser.OFPMatchField.make(OF.OXM_OF_VLAN_VID,vlan)
                 actions.append(parser.OFPActionPushVlan(VLAN_TAG_802_1Q))
                 actions.append(parser.OFPActionSetField(field))

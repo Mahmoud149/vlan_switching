@@ -50,6 +50,10 @@ class SimpleSwitch13(app_manager.RyuApp):
         # populate edges containing edge ports
         self.edges=self.getEdges()
 
+    # Handy function that lists all attributes in the given object    
+    def ls(self,obj):
+        print("\n".join([x for x in dir(obj) if x[0] != "_"]))
+
     def getEdges(self):
         edges = [(pt,id) for vlan in self.vlan_map.values() for (pt,id) in vlan]
         return list(set(edges))
@@ -90,12 +94,15 @@ class SimpleSwitch13(app_manager.RyuApp):
 
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
     def switch_features_handler(self, ev):
+        #self.ls(ev.msg)
         datapath = ev.msg.datapath
-        dpid = datapath.dpid
+        msg = ev.msg
+        dpid = datapath.id
         OF = datapath.ofproto
         parser = datapath.ofproto_parser
         in_port = msg.match['in_port']
         vlan = self.getVlan(in_port,dpid)
+
         # install table-miss flow entry
         match = parser.OFPMatch()
         actions = [parser.OFPActionOutput(OF.OFPP_CONTROLLER,OF.OFPCML_NO_BUFFER)]
@@ -207,3 +214,9 @@ class SimpleSwitch13(app_manager.RyuApp):
         actions=actions+Wactions
         out = parser.OFPPacketOut(datapath=datapath,in_port=in_port, buffer_id=msg.buffer_id, actions=actions, data=data)
         datapath.send_msg(out)
+
+
+
+
+
+

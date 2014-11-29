@@ -1,6 +1,7 @@
 #!/usr/bin/python
 from mininet.net import Mininet
 from mininet.util import dumpNodeConnections
+# if import error for OVSBridge, may need to git pull and then ./install.sh -n
 from mininet.node import Controller, RemoteController,UserSwitch,OVSBridge
 from mininet.log import setLogLevel
 from mininet.link import TCLink,Intf

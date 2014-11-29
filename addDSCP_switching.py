@@ -76,7 +76,7 @@ class SimpleSwitch13(app_manager.RyuApp):
         meter_mod=parser.OFPMeterMod(datapath=dp,
                                      command=OF.OFPMC_ADD,
                                      flags=OF.OFPMF_KBPS,
-                                     meter_id=self.getMeterID(vlan,dp),bands=band)
+                                     meter_id=self.getMeterID(vlan,dp.id),bands=band)
         dp.send_msg(meter_mod)    
 ########################################################################  
 #<<<<<<< HEAD
@@ -100,14 +100,15 @@ class SimpleSwitch13(app_manager.RyuApp):
         dpid = datapath.id
         OF = datapath.ofproto
         parser = datapath.ofproto_parser
-        in_port = msg.match['in_port']
-        vlan = self.getVlan(in_port,dpid)
+        #in_port = msg.match['in_port']
+        #vlan = self.getVlan(in_port,dpid)
 
         # install table-miss flow entry
         match = parser.OFPMatch()
         actions = [parser.OFPActionOutput(OF.OFPP_CONTROLLER,OF.OFPCML_NO_BUFFER)]
         self.add_flow(datapath, 0, match, actions)
-        self.add_DscpRemark(dpid,vlan)
+        for vlan in self.vlan_map:
+            self.add_DscpRemark(datapath,vlan)
 
     def add_flow(self, datapath, priority, match, actions, write=None,buffer_id=None,meter_id=None):
         OF = datapath.ofproto
@@ -139,7 +140,7 @@ class SimpleSwitch13(app_manager.RyuApp):
         in_port = msg.match['in_port']
         dpid = datapath.id
         vlan = self.getVlan(in_port,dpid)
-        meterID = self.getMeterID(vlanID,dpid)
+        if vlan is not 1: meterID = self.getMeterID(vlan,dpid)
         actions=[]
         Wactions=[]
         match = parser.OFPMatch()

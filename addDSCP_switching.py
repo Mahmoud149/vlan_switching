@@ -64,7 +64,12 @@ class SimpleSwitch13(app_manager.RyuApp):
         return 1
 ################## Added for DSCP Remark / Metering ####################
     def getMeterID(self,vlanID,dpid):
-        return self.meter_map[(vlanID,dpid)]
+        try:
+            return self.meter_map[(vlanID,dpid)]
+        except KeyError:
+            self.logger.info("getMeterID: Cannot find %s in meter_map", str((vlanID,dpid)))
+            return 0
+        
 
     def add_DscpRemark(self,dp,vlan):
         OF=dp.ofproto
@@ -107,6 +112,7 @@ class SimpleSwitch13(app_manager.RyuApp):
         match = parser.OFPMatch()
         actions = [parser.OFPActionOutput(OF.OFPP_CONTROLLER,OF.OFPCML_NO_BUFFER)]
         self.add_flow(datapath, 0, match, actions)
+        # Create DSCP Remark for each VLAN in the map
         for vlan in self.vlan_map:
             self.add_DscpRemark(datapath,vlan)
 
@@ -116,7 +122,7 @@ class SimpleSwitch13(app_manager.RyuApp):
         inst=[]
         if len(actions)>0: inst.append(parser.OFPInstructionActions(OF.OFPIT_APPLY_ACTIONS,actions))
         if write is not None:inst.append(parser.OFPInstructionActions(OF.OFPIT_WRITE_ACTIONS,write))
-        if meter_id is not None: inst.append(parser.OFPInstructionMeter(meter_id))
+        if (meter_id is not None) and (meter_id != 0) : inst.append(parser.OFPInstructionMeter(meter_id))
         if buffer_id:
             mod = parser.OFPFlowMod(datapath=datapath, buffer_id=buffer_id,
                         priority=priority, match=match,instructions=inst)
@@ -140,7 +146,10 @@ class SimpleSwitch13(app_manager.RyuApp):
         in_port = msg.match['in_port']
         dpid = datapath.id
         vlan = self.getVlan(in_port,dpid)
-        if vlan is not 1: meterID = self.getMeterID(vlan,dpid)
+        if vlan is not 1: 
+            meterID = self.getMeterID(vlan,dpid)
+        else:
+            meterID=0
         actions=[]
         Wactions=[]
         match = parser.OFPMatch()

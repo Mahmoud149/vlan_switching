@@ -62,7 +62,7 @@ class SimpleSwitch13(app_manager.RyuApp):
         for vlan,list in self.vlan_map.items():
             if (port,dpid) in list:  return vlan
         return 1
-################## Added for DSCP Remark / Metering ####################
+
     def getMeterID(self,vlanID,dpid):
         try:
             return self.meter_map[(vlanID,dpid)]
@@ -74,8 +74,10 @@ class SimpleSwitch13(app_manager.RyuApp):
     def add_DscpRemark(self,dp,vlan):
         OF=dp.ofproto
         parser=dp.ofproto_parser
-        burst_size=10000
+        burst_size=100
         band=[]
+        self.logger.info("Installing meter %s on %s, rate is  %s", 
+                                      self.getMeterID(vlan,dp.id), dp.id,self.bw_alloc[vlan] )
         band.append( parser.OFPMeterBandDscpRemark( rate=self.bw_alloc[vlan],
                                                     burst_size=burst_size,prec_level=4) )
         meter_mod=parser.OFPMeterMod(datapath=dp,
@@ -83,8 +85,7 @@ class SimpleSwitch13(app_manager.RyuApp):
                                      flags=OF.OFPMF_KBPS,
                                      meter_id=self.getMeterID(vlan,dp.id),bands=band)
         dp.send_msg(meter_mod)    
-########################################################################  
-#<<<<<<< HEAD
+
     def getPorts(self,map,vlanID,dpid):
         ports=[port if id==dpid else 0 for (port,id) in map[vlanID]]
         '''=======
@@ -146,10 +147,7 @@ class SimpleSwitch13(app_manager.RyuApp):
         in_port = msg.match['in_port']
         dpid = datapath.id
         vlan = self.getVlan(in_port,dpid)
-        if vlan is not 1: 
-            meterID = self.getMeterID(vlan,dpid)
-        else:
-            meterID=0
+        meterID = 0 if  vlan is 1 else self.getMeterID(vlan,dpid)
         actions=[]
         Wactions=[]
         match = parser.OFPMatch()
@@ -159,7 +157,7 @@ class SimpleSwitch13(app_manager.RyuApp):
         if VLAN in header: 
             vlan=header[VLAN].vid
             vlan=vlan-vlan%2#get even vlans
-            print ("Vlan in the HEADER %s src: %s dst: %s P: %s V: %s", dpid, src, dst,in_port, vlan)           
+            #print ("Vlan in the HEADER %s src: %s dst: %s P: %s V: %s", dpid, src, dst,in_port, vlan)           
         #self.logger.info("packet in %s src: %s dst: %s P: %s V: %s", dpid, src, dst,in_port, vlan)
         self.mac_to_port.setdefault(dpid, {})
         if vlan is not 1:
@@ -168,12 +166,12 @@ class SimpleSwitch13(app_manager.RyuApp):
 
         # learn a mac address to avoid FLOOD next time.
         self.mac_to_port[dpid][src] = in_port
-        self.logger.info("packet in %s src: %s dst: %s P: %s V: %s", dpid, src, dst,in_port, vlan)
+        #self.logger.info("packet in %s src: %s dst: %s P: %s V: %s", dpid, src, dst,in_port, vlan)
         if dst in self.mac_to_port[dpid]:
             #self.logger.info("found %s in mac_to_port[%s][%s]",dst,vlan,dpid)
             floodOut = False
             out_port = self.mac_to_port[dpid][dst]           
-            self.logger.info("packet known %s P: %s V: %s", dpid, out_port, vlan)
+            #self.logger.info("packet known %s P: %s V: %s", dpid, out_port, vlan)
             if vlan is 1:
                 Wactions.append(parser.OFPActionOutput(out_port))
             elif out_port in trunk_ports:

@@ -37,7 +37,7 @@ class SimpleSwitch13(app_manager.RyuApp):
                          20:[(2,4),(3,4),(4,4),
                            (5,3)]}
 
-        self.trunk_map = {10:[(1,3),(1,4)],
+        self.trunk_map = {10:[(1,3),(1,4),(1,1),(2,1),(1,2),(2,2)],
                           20:[(1,3),(1,4)]}
 
         # format: {(vlanID,dpid):meterID}
@@ -74,7 +74,7 @@ class SimpleSwitch13(app_manager.RyuApp):
     def add_DscpRemark(self,dp,vlan):
         OF=dp.ofproto
         parser=dp.ofproto_parser
-        burst_size=100
+        burst_size=10
         band=[]
         self.logger.info("Installing meter %s on %s, rate is  %s", 
                                       self.getMeterID(vlan,dp.id), dp.id,self.bw_alloc[vlan] )

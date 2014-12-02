@@ -36,7 +36,7 @@ class SimpleSwitch13(app_manager.RyuApp):
 			               (5,4)],
                          20:[(2,4),(3,4),(4,4),
                            (5,3)]}
-        self.trunk_map = {10:[(1,3),(1,4)],
+        self.trunk_map = {10:[(1,3),(1,4),(1,1),(2,1),(1,2),(2,2)],
                           20:[(1,3),(1,4)]}
         # populate edges containing edge ports
         self.edges=self.getEdges()

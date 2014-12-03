@@ -2,7 +2,7 @@ from ryu.base import app_manager
 from ryu.controller import ofp_event
 from ryu.controller.handler import CONFIG_DISPATCHER, MAIN_DISPATCHER
 from ryu.controller.handler import set_ev_cls
-from ryu.ofproto import ofproto_v1_3
+from ryu.ofproto import ofproto_v1_3,ofproto_v1_3_parser
 from ryu.lib.packet import packet,vlan
 from ryu.lib.packet import ethernet
 VLAN_TAG_802_1Q = 0x8100
@@ -95,7 +95,7 @@ class SimpleSwitch13(app_manager.RyuApp):
         pkt = packet.Packet(msg.data)
         header = dict((p.protocol_name, p) for p in pkt.protocols if type(p) != str)
         datapath = msg.datapath
-        OF,parser = datapath.ofproto,datapath.ofproto_parser
+        OF,parser=datapath.ofproto,datapath.ofproto_parser
         in_port = msg.match['in_port']
         dpid = datapath.id
         vlan = self.getVlan(in_port,dpid)
@@ -136,24 +136,36 @@ class SimpleSwitch13(app_manager.RyuApp):
         else:
             #improve this condition
             floodOut = True
-            actions = []
-            out_port = []
             if vlan is 1:
                 out_port = OF.OFPP_FLOOD
                 Wactions.append(parser.OFPActionOutput(out_port))
             else:
-                out_port=list(set(access_ports+trunk_ports)-set([in_port]))
+                port_list=list(set(access_ports+trunk_ports)-set([in_port]))
                 #self.logger.warning(str(self.getPorts(self.vlan,dpid)))
-                for x in out_port:
+                for x in port_list:
                     Wactions.append(datapath.ofproto_parser.OFPActionOutput(x))
         # install a flow to avoid packet_in next time
         #improve this condition
         if not floodOut:
             if VLAN in header:
-                match = parser.OFPMatch(in_port=in_port, eth_dst=dst,vlan_vid=vlan)
-                if out_port in trunk_ports:#reassign vlan based on dscp flag
-                else:actions.append(parser.OFPActionPopVlan())
                 meterID=0
+                match = parser.OFPMatch(in_port=in_port, eth_dst=dst,vlan_vid=(vlan+1))#add vlan mask
+                #match.set_vlan_vid(vlan)
+                #add match field for vlan 11
+                #match.set_vlan_vid(vlanmask) 
+                if out_port in trunk_ports: 
+                  print "Looks like we are using a trunk link, we should install a different match to reassign vlan"
+                  '''match = parser.OFPMatch(in_port=in_port,eth_dst=dst,vlan_vid=vlan,ip_dscp=0x08,
+                                          eth_type=0x0800)#match dscp
+                  field=parser.OFPMatchField.make(OF.OXM_OF_VLAN_VID,(vlan+1))
+                  addAction=actions+[parser.OFPActionSetField(field)]
+                  self.add_flow(datapath, 2,match, actions, write=Wactions,buffer_id=msg.buffer_id,
+                         meter_id=meterID)'''
+                else: actions.append(parser.OFPActionPopVlan())
+                self.add_flow(datapath, 1, match, actions, write=Wactions,meter_id=meterID)
+
+                match = parser.OFPMatch(in_port=in_port, eth_dst=dst,vlan_vid=vlan)
+                
                 #match.set_vlan_vid_masked(vlan,((1 << 16) - 2))
             else:
                 meterID=self.getMeterID(vlan,dpid)#meter if meter_id
@@ -163,7 +175,7 @@ class SimpleSwitch13(app_manager.RyuApp):
                 self.add_flow(datapath, 1, match, actions, write=Wactions,buffer_id=msg.buffer_id,meter_id=meterID)
                 return
             else:
-                self.add_flow(datapath, 1, match, actions,write=Wactions)
+                self.add_flow(datapath, 1, match, actions,write=Wactions,meter_id=meterID)
         #self.logger.info("packet out %s P: %s V: %s", dpid, out_port, vlan)
         data = None
         if msg.buffer_id == OF.OFP_NO_BUFFER:

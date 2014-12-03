@@ -153,14 +153,14 @@ class SimpleSwitch13(app_manager.RyuApp):
                 #match.set_vlan_vid(vlan)
                 #add match field for vlan 11
                 #match.set_vlan_vid(vlanmask) 
-                if out_port in trunk_ports: 
+                if out_port in trunk_ports: #debug reassigning
                   print "Looks like we are using a trunk link, we should install a different match to reassign vlan"
-                  '''match = parser.OFPMatch(in_port=in_port,eth_dst=dst,vlan_vid=vlan,ip_dscp=0x08,
+                  match = parser.OFPMatch(in_port=in_port,eth_dst=dst,vlan_vid=vlan,ip_dscp=0x08,
                                           eth_type=0x0800)#match dscp
                   field=parser.OFPMatchField.make(OF.OXM_OF_VLAN_VID,(vlan+1))
                   addAction=actions+[parser.OFPActionSetField(field)]
-                  self.add_flow(datapath, 2,match, actions, write=Wactions,buffer_id=msg.buffer_id,
-                         meter_id=meterID)'''
+                  self.add_flow(datapath, 2,match, addAction, write=Wactions,buffer_id=msg.buffer_id,
+                         meter_id=meterID)
                 else: actions.append(parser.OFPActionPopVlan())
                 self.add_flow(datapath, 1, match, actions, write=Wactions,meter_id=meterID)
 

@@ -156,7 +156,7 @@ class SimpleSwitch13(app_manager.RyuApp):
                 meterID=0
                 #match.set_vlan_vid_masked(vlan,((1 << 16) - 2))
             else:
-                meterID=self.getMeterID(vlan,dpid)
+                meterID=self.getMeterID(vlan,dpid)#meter if meter_id
                 match = parser.OFPMatch(in_port=in_port, eth_dst=dst)
             # verify if we have a valid buffer_id, if yes avoid to send both
             if msg.buffer_id != OF.OFP_NO_BUFFER:

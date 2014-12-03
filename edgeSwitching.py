@@ -1,18 +1,3 @@
-# Copyright (C) 2011 Nippon Telegraph and Telephone Corporation.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#    http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-# implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 from ryu.base import app_manager
 from ryu.controller import ofp_event
 from ryu.controller.handler import CONFIG_DISPATCHER, MAIN_DISPATCHER
@@ -29,26 +14,17 @@ class SimpleSwitch13(app_manager.RyuApp):
     def __init__(self, *args, **kwargs):
         super(SimpleSwitch13, self).__init__(*args, **kwargs)
         self.mac_to_port = {}
-        # add a VLAN map table 
-        # format: {'vlanID':[(port1,dpid1),(port2,dpid2),...]}
         self.vlan_map = {10:[(2,1),(1,1),
-                           (2,3),(3,3),(4,3),
-			               (5,4)],
-                         20:[(2,4),(3,4),(4,4),
-                           (5,3)]}
-
+                           (2,3),(3,3),(4,3),(5,4)],
+                         20:[(2,4),(3,4),(4,4),(5,3)]}
         self.trunk_map = {10:[(1,3),(1,4),(1,1),(2,1),(1,2),(2,2)],
                           20:[(1,3),(1,4)]}
-
-        # format: {(vlanID,dpid):meterID}
-        self.meter_map = {(10,1):1,(10,3):1,(10,4):1,
-                         (20,4):2,(20,3):2}
-
+        # format: {dpid:{vlanID:meterID}}
+        self.meter_map = {1: {10:1,20:2},
+                          3: {10:1,20:2},
+                          4: {10:1,20:2}}
         # bandwidth allocation based on each vlan                 
-        self.bw_alloc = {10:1000,20:2000}
-
-        # populate edges containing edge ports
-        self.edges=self.getEdges()
+        self.bw = {10:1000,20:2000}
 
     # Handy function that lists all attributes in the given object    
     def ls(self,obj):
@@ -57,44 +33,28 @@ class SimpleSwitch13(app_manager.RyuApp):
     def getEdges(self):
         edges = [(pt,id) for vlan in self.vlan_map.values() for (pt,id) in vlan]
         return list(set(edges))
-        
+    #FIXME 3 lines to get a vlan id?    
     def getVlan(self,port,dpid):
         for vlan,list in self.vlan_map.items():
             if (port,dpid) in list:  return vlan
         return 1
-
     def getMeterID(self,vlanID,dpid):
-        try:
-            return self.meter_map[(vlanID,dpid)]
-        except KeyError:
-            self.logger.info("getMeterID: Cannot find %s in meter_map", str((vlanID,dpid)))
-            return 0
-        
+        if dpid not in self.meter_map: return 0
+        if vlanID not in self.meter_map[dpid]: return 0
+        return self.meter_map[dpid][vlanID]
 
     def add_DscpRemark(self,dp,vlan):
-        OF=dp.ofproto
-        parser=dp.ofproto_parser
-        burst_size=10
-        band=[]
+        OF,parser=dp.ofproto,dp.ofproto_parser
         self.logger.info("Installing meter %s on %s, rate is  %s", 
-                                      self.getMeterID(vlan,dp.id), dp.id,self.bw_alloc[vlan] )
-        band.append( parser.OFPMeterBandDscpRemark( rate=self.bw_alloc[vlan],
-                                                    burst_size=burst_size,prec_level=4) )
-        meter_mod=parser.OFPMeterMod(datapath=dp,
-                                     command=OF.OFPMC_ADD,
-                                     flags=OF.OFPMF_KBPS,
+                                      self.getMeterID(vlan,dp.id), dp.id,self.bw[vlan] )
+        band=[( parser.OFPMeterBandDscpRemark( rate=self.bw[vlan],burst_size=10,prec_level=4 ) )]
+        meter_mod=parser.OFPMeterMod(datapath=dp,command=OF.OFPMC_ADD,flags=OF.OFPMF_KBPS,
                                      meter_id=self.getMeterID(vlan,dp.id),bands=band)
         dp.send_msg(meter_mod)    
 
     def getPorts(self,map,vlanID,dpid):
+        #conditions for vlan=1
         ports=[port if id==dpid else 0 for (port,id) in map[vlanID]]
-        '''=======
-        def getPORTS(self,vlanID,dpid):
-        self.logger.info("getPORTS called vlanID = %s dpid = %s",vlanID,dpid)
-        access=[x[0] if x[1]==dpid else 0 for x in self.vlan_map[vlanID]]
-        trunk=[x[0] if x[1]==dpid else 0 for x in self.trunk_map[vlanID]]
-        ports=access+trunk
-        >>>>>> parent of 51315fa... Not working yet. Gotta fix flooding on vlan trunk'''
         while 0 in ports: ports.remove(0)
         return ports
 
@@ -104,22 +64,17 @@ class SimpleSwitch13(app_manager.RyuApp):
         datapath = ev.msg.datapath
         msg = ev.msg
         dpid = datapath.id
-        OF = datapath.ofproto
-        parser = datapath.ofproto_parser
-        #in_port = msg.match['in_port']
-        #vlan = self.getVlan(in_port,dpid)
-
+        OF,parser=datapath.ofproto,datapath.ofproto_parser
         # install table-miss flow entry
-        match = parser.OFPMatch()
+        #FIXME figureout what difference does a buffer make on the data structure
         actions = [parser.OFPActionOutput(OF.OFPP_CONTROLLER,OF.OFPCML_NO_BUFFER)]
-        self.add_flow(datapath, 0, match, actions)
+        self.add_flow(datapath, 0, parser.OFPMatch(), actions)
         # Create DSCP Remark for each VLAN in the map
         for vlan in self.vlan_map:
             self.add_DscpRemark(datapath,vlan)
 
     def add_flow(self, datapath, priority, match, actions, write=None,buffer_id=None,meter_id=None):
-        OF = datapath.ofproto
-        parser = datapath.ofproto_parser
+        OF,parser=datapath.ofproto,datapath.ofproto_parser
         inst=[]
         if len(actions)>0: inst.append(parser.OFPInstructionActions(OF.OFPIT_APPLY_ACTIONS,actions))
         if write is not None:inst.append(parser.OFPInstructionActions(OF.OFPIT_WRITE_ACTIONS,write))
@@ -130,34 +85,29 @@ class SimpleSwitch13(app_manager.RyuApp):
         else:
             mod = parser.OFPFlowMod(datapath=datapath, priority=priority,
                                     match=match, instructions=inst)
-        print inst
         #self.logger.info("flow_mod match: %s action: %s", str(match),str(inst))
         datapath.send_msg(mod)
 
     @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
     def _packet_in_handler(self, ev):
-        if ev.msg.msg_len < ev.msg.total_len:
-            self.logger.debug("packet truncated: only %s of %s bytes",ev.msg.msg_len, ev.msg.total_len)
+        if ev.msg.msg_len < ev.msg.total_len:self.logger.debug("packet truncated: only %s of %s bytes",ev.msg.msg_len, ev.msg.total_len)
         msg = ev.msg
         pkt = packet.Packet(msg.data)
         header = dict((p.protocol_name, p) for p in pkt.protocols if type(p) != str)
-        
         datapath = msg.datapath
         OF,parser = datapath.ofproto,datapath.ofproto_parser
         in_port = msg.match['in_port']
         dpid = datapath.id
         vlan = self.getVlan(in_port,dpid)
-        meterID = 0 if  vlan is 1 else self.getMeterID(vlan,dpid)
-        actions=[]
-        Wactions=[]
+        meterID =self.getMeterID(vlan,dpid)
+        actions,Wactions=[],[]
         match = parser.OFPMatch()
-        eth = header[ETHERNET]
-        dst,src = eth.dst,eth.src
-        #Pop Vlan Tag if necessary        
+        dst,src = header[ETHERNET].dst,header[ETHERNET].src      
         if VLAN in header: 
             vlan=header[VLAN].vid
             vlan=vlan-vlan%2#get even vlans
             #print ("Vlan in the HEADER %s src: %s dst: %s P: %s V: %s", dpid, src, dst,in_port, vlan)           
+        #FIXME find a better way to debug the code
         #self.logger.info("packet in %s src: %s dst: %s P: %s V: %s", dpid, src, dst,in_port, vlan)
         self.mac_to_port.setdefault(dpid, {})
         if vlan is not 1:
@@ -176,14 +126,15 @@ class SimpleSwitch13(app_manager.RyuApp):
                 Wactions.append(parser.OFPActionOutput(out_port))
             elif out_port in trunk_ports:
                 Wactions.append(parser.OFPActionOutput(out_port))
-                self.logger.info("Pushing Vlan Tag %s, dpid:%s,src:%s,dst:%s", vlan, dpid,src, dst)
-                field=parser.OFPMatchField.make(OF.OXM_OF_VLAN_VID,vlan)
-                actions.append(parser.OFPActionPushVlan(VLAN_TAG_802_1Q))
-                actions.append(parser.OFPActionSetField(field))
+                if VLAN not in header:#Don't overlap vlan tags
+                    self.logger.info("Pushing Vlan Tag %s, dpid:%s,src:%s,dst:%s", vlan, dpid,src, dst)
+                    field=parser.OFPMatchField.make(OF.OXM_OF_VLAN_VID,vlan)
+                    actions.append(parser.OFPActionPushVlan(VLAN_TAG_802_1Q))
+                    actions.append(parser.OFPActionSetField(field))
             elif out_port in access_ports:
                 Wactions.append(parser.OFPActionOutput(out_port))
-            
         else:
+            #improve this condition
             floodOut = True
             actions = []
             out_port = []
@@ -195,22 +146,19 @@ class SimpleSwitch13(app_manager.RyuApp):
                 #self.logger.warning(str(self.getPorts(self.vlan,dpid)))
                 for x in out_port:
                     Wactions.append(datapath.ofproto_parser.OFPActionOutput(x))
-
-        #actions = [parser.OFPActionOutput(out_port)]
-
         # install a flow to avoid packet_in next time
+        #improve this condition
         if not floodOut:
             if VLAN in header:
-                print ("About to POP VLAN in %s src: %s dst: %s P: %s V: %s", dpid, src, dst,in_port, vlan)
                 match = parser.OFPMatch(in_port=in_port, eth_dst=dst,vlan_vid=vlan)
-                actions.append(parser.OFPActionPopVlan())
-                meter_id=0
+                if out_port in trunk_ports:#reassign vlan based on dscp flag
+                else:actions.append(parser.OFPActionPopVlan())
+                meterID=0
                 #match.set_vlan_vid_masked(vlan,((1 << 16) - 2))
             else:
+                meterID=self.getMeterID(vlan,dpid)
                 match = parser.OFPMatch(in_port=in_port, eth_dst=dst)
-            #actions.append(parser.OFPActionPopVlan())
             # verify if we have a valid buffer_id, if yes avoid to send both
-            # flow_mod & packet_out
             if msg.buffer_id != OF.OFP_NO_BUFFER:
                 self.add_flow(datapath, 1, match, actions, write=Wactions,buffer_id=msg.buffer_id,meter_id=meterID)
                 return
